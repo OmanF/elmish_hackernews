@@ -8,10 +8,19 @@ let itemDecoder =
     Decode.object (fun fields ->
         { Id = fields.Required.At [ "id" ] Decode.int
           Title = fields.Required.At [ "title" ] Decode.string
-          Url = fields.Optional.At [ "url" ] Decode.string })
+          Url = fields.Optional.At [ "url" ] Decode.string
+          Score = fields.Required.At [ "score" ] Decode.int })
 
-let storiesEndpoint =
-    "https://hacker-news.firebaseio.com/v0/topstories.json"
+let storiesEndpoint stories =
+    let fromBaseUrl =
+        sprintf "https://hacker-news.firebaseio.com/v0/%sstories.json"
+
+    match stories with
+    | Stories.New -> fromBaseUrl "new"
+    | Stories.Top -> fromBaseUrl "top"
+    | Stories.Best -> fromBaseUrl "best"
+    | Stories.Job -> fromBaseUrl "job"
+
 
 let loadStoryItem (itemId: int) =
     async {
@@ -29,9 +38,11 @@ let loadStoryItem (itemId: int) =
         | _ -> return None
     }
 
-let loadStoryItems =
+let loadStoryItems stories =
     async {
-        let! (status, responseText) = Http.get storiesEndpoint
+        let endpoint = storiesEndpoint stories
+
+        let! (status, responseText) = Http.get endpoint
 
         match status with
         | 200 ->
