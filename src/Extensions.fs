@@ -4,7 +4,7 @@ module Extensions
 open Elmish
 
 [<AutoOpen>]
-module AsyncOperationsStatus =
+module AsyncOperationsOps =
     type Deferred<'t> =
         | HasNotStartedYet
         | InProgress

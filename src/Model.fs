@@ -4,6 +4,7 @@ module Model
 type HackernewsItem =
     { Id: int
       Title: string
+      ItemType: string
       Url: string option
       Score: int }
 
@@ -16,8 +17,9 @@ type Stories =
 
 type State =
     { CurrentStories: Stories
-      StoryItems: Deferred<Result<HackernewsItem list, string>> }
+      StoryItems: Deferred<Result<Map<int, Deferred<Result<HackernewsItem, string>>>, string>> }
 
 type Msg =
+    | LoadStoryItems of AsyncOperationStatus<Result<int list, string>>
+    | LoadedStoryItem of int * Result<HackernewsItem, string>
     | ChangeStories of Stories
-    | LoadStoryItems of AsyncOperationStatus<Result<HackernewsItem list, string>>

@@ -20,65 +20,10 @@ let storyCategories =
       Stories.Best
       Stories.Job ]
 
-let renderTabs selectedStories dispatch =
-    let switchStories stories =
-        if selectedStories <> stories then dispatch (ChangeStories stories)
-
+let div (classes: string list) (children: ReactElement list) =
     Html.div
-        [ prop.className
-            [ Blm.Tabs
-              Blm.IsToggle
-              Blm.IsFullwidth ]
-          prop.children
-              [ Html.ul
-                  [ for stories in storyCategories ->
-                      Html.li
-                          [ prop.classes [ if selectedStories = stories then Blm.IsActive ]
-                            prop.onClick (fun _ -> switchStories stories)
-                            prop.children [ Html.a [ Html.span (storiesName stories) ] ] ] ] ] ]
-
-
-let renderError (errorMsg: string) =
-    Html.h1
-        [ prop.style [ style.color.red ]
-          prop.text errorMsg ]
-
-let renderItem item =
-    Html.div
-        [ prop.className Blm.Box
-          prop.style
-              [ style.marginTop 15
-                style.marginBottom 15 ]
-          prop.children
-              [ Html.div
-                  [ prop.className [ Blm.Columns; Blm.IsMobile ]
-                    prop.children
-                        [ Html.div
-                            [ prop.className [ Blm.Column; Blm.IsNarrow ]
-                              prop.children
-                                  [ Html.div
-                                      [ prop.className [ Blm.Icon ]
-                                        prop.style [ style.marginLeft 20 ]
-                                        prop.children
-                                            [ Html.i [ prop.className [ Fa.Fa; Fa.FaPoll; Fa.Fa2X ] ]
-                                              Html.span
-                                                  [ prop.style
-                                                      [ style.marginLeft 10
-                                                        style.marginRight 10 ]
-                                                    prop.text item.Score ] ] ] ] ]
-
-                          Html.div
-                              [ prop.className Blm.Column
-                                prop.children
-                                    [ match item.Url with
-                                      | Some url ->
-                                          Html.a
-                                              [ prop.style [ style.textDecoration.underline ]
-                                                prop.target.blank
-                                                prop.href url
-                                                prop.text item.Title ]
-
-                                      | None -> Html.p item.Title ] ] ] ] ] ]
+        [ prop.className classes
+          prop.children children ]
 
 let spinner =
     Html.div
@@ -87,9 +32,87 @@ let spinner =
               style.marginTop 20 ]
           prop.children [ Html.i [ prop.className [ Fa.Fa; Fa.FaCog; Fa.FaSpin; Fa.Fa2X ] ] ] ]
 
-let renderItems =
-    function
+let title =
+    Html.h1
+        [ prop.className Blm.Title
+          prop.text "Elmish Hacker News" ]
+
+let renderTab currentStories stories dispatch =
+    Html.li
+        [ prop.className [ if currentStories = stories then Blm.IsActive ]
+          prop.onClick (fun _ -> if (currentStories <> stories) then dispatch (ChangeStories stories))
+          prop.children [ Html.a [ Html.span (storiesName stories) ] ] ]
+
+let renderTabs currentStories dispatch =
+    Html.div
+        [ prop.className
+            [ Blm.Tabs
+              Blm.IsToggle
+              Blm.IsFullwidth ]
+          prop.children [ Html.ul [ for story in storyCategories -> renderTab currentStories story dispatch ] ] ]
+
+let renderError (errorMsg: string) =
+    Html.h1
+        [ prop.style [ style.color.red ]
+          prop.text errorMsg ]
+
+let renderItemContent (item: HackernewsItem) =
+    Html.div
+        [ div [ Blm.Columns; Blm.IsMobile ]
+              [ div [ Blm.Column; Blm.IsNarrow ]
+                    [ Html.div
+                        [ prop.className [ Blm.Icon ]
+                          prop.style [ style.marginLeft 20 ]
+                          prop.children
+                              [ Html.i [ prop.className [ Fa.Fa; Fa.FaPoll; Fa.Fa2X ] ]
+                                Html.span
+                                    [ prop.style
+                                        [ style.marginLeft 10
+                                          style.marginRight 10 ]
+                                      prop.text item.Score ] ] ] ] ]
+
+          div [ Blm.Column ]
+              [ match item.Url with
+                | Some url ->
+                    Html.a
+                        [ prop.style [ style.textDecoration.underline ]
+                          prop.target.blank
+                          prop.href url
+                          prop.text item.Title ]
+
+                | None -> Html.p item.Title ] ]
+
+let renderStoryItem (itemId: int) storyItem =
+    let renderItem =
+        match storyItem with
+        | HasNotStartedYet -> Html.none
+        | InProgress -> spinner
+        | Resolved (Error error) -> renderError error
+        | Resolved (Ok storyItem) -> renderItemContent storyItem
+
+    Html.div
+        [ prop.key itemId
+          prop.className Blm.Box
+          prop.style
+              [ style.marginTop 15
+                style.marginBottom 15 ]
+          prop.children [ renderItem ] ]
+
+let renderStories items =
+    match items with
     | HasNotStartedYet -> Html.none
     | InProgress -> spinner
-    | Resolved (Error errorMsg) -> renderError errorMsg
-    | Resolved (Ok items) -> React.fragment [ for item in items -> renderItem item ]
+    | Resolved (Error error) -> renderError error
+    | Resolved (Ok items) ->
+        items
+        |> Map.toList
+        |> List.map (fun (id, storyItem) -> renderStoryItem id storyItem)
+        |> Html.div
+
+let render state dispatch =
+    Html.div
+        [ prop.style [ style.padding 20 ]
+          prop.children
+              [ title
+                renderTabs state.CurrentStories dispatch
+                renderStories state.StoryItems ] ]

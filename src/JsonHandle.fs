@@ -4,10 +4,13 @@ module JsonHandle
 open Fable.SimpleHttp
 open Thoth.Json
 
+let rnd = System.Random()
+
 let itemDecoder =
     Decode.object (fun fields ->
         { Id = fields.Required.At [ "id" ] Decode.int
           Title = fields.Required.At [ "title" ] Decode.string
+          ItemType = fields.Required.At [ "type" ] Decode.string
           Url = fields.Optional.At [ "url" ] Decode.string
           Score = fields.Required.At [ "score" ] Decode.int })
 
@@ -21,45 +24,50 @@ let storiesEndpoint stories =
     | Stories.Best -> fromBaseUrl "best"
     | Stories.Job -> fromBaseUrl "job"
 
+let (|HttpOk|HttpError|) status =
+    match status with
+    | 200 -> HttpOk
+    | _ -> HttpError
 
 let loadStoryItem (itemId: int) =
     async {
+        do! Async.Sleep(rnd.Next(1000, 3000))
+
         let endpoint =
             sprintf "https://hacker-news.firebaseio.com/v0/item/%d.json" itemId
 
         let! (status, responseText) = Http.get endpoint
 
         match status with
-        | 200 ->
+        | HttpOk ->
             match Decode.fromString itemDecoder responseText with
-            | Ok storyItem -> return Some storyItem
-            | Error _ -> return None
+            | Ok storyItem -> return LoadedStoryItem(itemId, Ok storyItem)
+            | Error parseError -> return LoadedStoryItem(itemId, Error parseError)
 
-        | _ -> return None
+        | HttpError ->
+            return LoadedStoryItem
+                       (itemId,
+                        Error
+                            ("HTTP error while loading response "
+                             + string itemId))
     }
 
 let loadStoryItems stories =
     async {
         let endpoint = storiesEndpoint stories
-
         let! (status, responseText) = Http.get endpoint
 
         match status with
-        | 200 ->
+        | HttpOk ->
             let storyIds =
                 Decode.fromString (Decode.list Decode.int) responseText
 
             match storyIds with
             | Ok storyIds ->
-                let! storyItems =
-                    storyIds
-                    |> List.truncate 10
-                    |> List.map loadStoryItem
-                    |> Async.Parallel
-                    |> Async.map (Array.choose id >> List.ofArray)
-
-                return LoadStoryItems(Finished(Ok storyItems))
+                let firstTenStories = storyIds |> List.truncate 10
+                return LoadStoryItems(Finished(Ok firstTenStories))
 
             | Error errorMsg -> return LoadStoryItems(Finished(Error errorMsg))
-        | _ -> return LoadStoryItems(Finished(Error responseText))
+
+        | HttpError -> return LoadStoryItems(Finished(Error "Could not load story."))
     }
