@@ -4,6 +4,7 @@ module Model
 type HackernewsItem =
     { Id: int
       Title: string
+      Time: int
       ItemType: string
       Url: string option
       Score: int }

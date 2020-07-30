@@ -2,7 +2,9 @@
 module View
 
 open Feliz
+open Fable.DateFunctions
 open Zanaptak.TypedCssClasses
+open Fable.Core.JsInterop
 
 type Blm = CssClasses<"https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css", Naming.PascalCase>
 type Fa = CssClasses<"https://use.fontawesome.com/releases/v5.14.0/css/all.css", Naming.PascalCase>
@@ -19,6 +21,28 @@ let storyCategories =
       Stories.Top
       Stories.Best
       Stories.Job ]
+
+let timeDistanceInWords (item: HackernewsItem) =
+    let formatOptions = createEmpty<IFormatDistanceOptions>
+    formatOptions.includeSeconds <- true
+    formatOptions.addSuffix <- true
+
+    let epochPoint =
+        System.DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc)
+
+    let itemTime =
+        epochPoint.AddSeconds(item.Time).ToLocalTime()
+
+    itemTime.FormatDistanceToNow(formatOptions)
+
+let sortByTime (storyItems: List<int * Deferred<Result<HackernewsItem, string>>>) =
+    storyItems
+    |> List.sortWith (fun (_, defItem1) (_, defItem2) ->
+        match defItem1, defItem2 with
+        | Resolved (Ok itemA), Resolved (Ok itemB) -> if itemA.Time >= itemB.Time then -1 else 1
+        | Resolved (Ok itemA), _ -> -1
+        | _, Resolved (Ok itemB) -> 1
+        | _, _ -> 1)
 
 let div (classes: string list) (children: ReactElement list) =
     Html.div
@@ -80,7 +104,9 @@ let renderItemContent (item: HackernewsItem) =
                           prop.href url
                           prop.text item.Title ]
 
-                | None -> Html.p item.Title ] ]
+                | None -> Html.p item.Title ]
+
+          div [] [ Html.span [ prop.text (timeDistanceInWords item) ] ] ]
 
 let renderStoryItem (itemId: int) storyItem =
     let renderItem =
@@ -106,6 +132,7 @@ let renderStories items =
     | Resolved (Ok items) ->
         items
         |> Map.toList
+        |> sortByTime
         |> List.map (fun (id, storyItem) -> renderStoryItem id storyItem)
         |> Html.div
 

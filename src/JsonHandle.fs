@@ -10,6 +10,7 @@ let itemDecoder =
     Decode.object (fun fields ->
         { Id = fields.Required.At [ "id" ] Decode.int
           Title = fields.Required.At [ "title" ] Decode.string
+          Time = fields.Required.At [ "time" ] Decode.int
           ItemType = fields.Required.At [ "type" ] Decode.string
           Url = fields.Optional.At [ "url" ] Decode.string
           Score = fields.Required.At [ "score" ] Decode.int })
@@ -31,7 +32,7 @@ let (|HttpOk|HttpError|) status =
 
 let loadStoryItem (itemId: int) =
     async {
-        do! Async.Sleep(rnd.Next(1000, 3000))
+        do! Async.Sleep(rnd.Next(100, 3000))
 
         let endpoint =
             sprintf "https://hacker-news.firebaseio.com/v0/item/%d.json" itemId
