@@ -45,68 +45,82 @@ let sortByTime (storyItems: List<int * Deferred<Result<HackernewsItem, string>>>
         | _, _ -> 1)
 
 let div (classes: string list) (children: ReactElement list) =
-    Html.div
-        [ prop.className classes
-          prop.children children ]
+    Html.div [ prop.className classes
+               prop.children children ]
 
 let spinner =
-    Html.div
-        [ prop.style
-            [ style.textAlign.center
-              style.marginTop 20 ]
-          prop.children [ Html.i [ prop.className [ Fa.Fa; Fa.FaCog; Fa.FaSpin; Fa.Fa2X ] ] ] ]
+    Html.div [ prop.style [ style.textAlign.center
+                            style.marginTop 20 ]
+               prop.children
+                   [ Html.i
+                       [ prop.className [ Fa.Fa
+                                          Fa.FaCog
+                                          Fa.FaSpin
+                                          Fa.Fa2X ] ] ] ]
 
 let title =
-    Html.h1
-        [ prop.className Blm.Title
-          prop.text "Elmish Hacker News" ]
+    Html.h1 [ prop.className Blm.Title
+              prop.text "Elmish Hacker News" ]
+
+let continueButton (state: State) dispatch =
+    Html.button [ prop.className [ Blm.Button
+                                   Blm.IsPrimary ]
+                  prop.onClick (fun _ -> dispatch (ContinueClicked(Resolved state.RemainingBatches)))
+                  prop.text "Load 10 more stories" ]
+
+
+let renderContinueButton (state: State) dispatch =
+    match state.ContinueButtonState, state.RemainingBatches with
+    | HasNotStartedYet, _h :: _t -> continueButton state dispatch
+    | Resolved _, _h :: _t -> continueButton state dispatch
+    | HasNotStartedYet, [] -> Html.none
+    | Resolved _, [] -> Html.none
+    | InProgress, _ -> Html.h1 [ prop.text "Loading..." ]
 
 let renderTab currentStories stories dispatch =
-    Html.li
-        [ prop.className [ if currentStories = stories then Blm.IsActive ]
-          prop.onClick (fun _ -> if (currentStories <> stories) then dispatch (ChangeStories stories))
-          prop.children [ Html.a [ Html.span (storiesName stories) ] ] ]
+    Html.li [ prop.className [ if currentStories = stories then Blm.IsActive ]
+              prop.onClick (fun _ -> if (currentStories <> stories) then dispatch (ChangeStories stories))
+              prop.children [ Html.a [ Html.span (storiesName stories) ] ] ]
 
 let renderTabs currentStories dispatch =
-    Html.div
-        [ prop.className
-            [ Blm.Tabs
-              Blm.IsToggle
-              Blm.IsFullwidth ]
-          prop.children [ Html.ul [ for story in storyCategories -> renderTab currentStories story dispatch ] ] ]
+    Html.div [ prop.className [ Blm.Tabs
+                                Blm.IsToggle
+                                Blm.IsFullwidth ]
+               prop.children [ Html.ul [ for story in storyCategories -> renderTab currentStories story dispatch ] ] ]
 
 let renderError (errorMsg: string) =
-    Html.h1
-        [ prop.style [ style.color.red ]
-          prop.text errorMsg ]
+    Html.h1 [ prop.style [ style.color.red ]
+              prop.text errorMsg ]
 
 let renderItemContent (item: HackernewsItem) =
-    Html.div
-        [ div [ Blm.Columns; Blm.IsMobile ]
-              [ div [ Blm.Column; Blm.IsNarrow ]
-                    [ Html.div
-                        [ prop.className [ Blm.Icon ]
-                          prop.style [ style.marginLeft 20 ]
-                          prop.children
-                              [ Html.i [ prop.className [ Fa.Fa; Fa.FaPoll; Fa.Fa2X ] ]
-                                Html.span
-                                    [ prop.style
-                                        [ style.marginLeft 10
-                                          style.marginRight 10 ]
-                                      prop.text item.Score ] ] ] ] ]
+    Html.div [ div [ Blm.Columns; Blm.IsMobile ] [
+                   div [ Blm.Column; Blm.IsNarrow ] [
+                       Html.div [ prop.className [ Blm.Icon ]
+                                  prop.style [ style.marginLeft 20 ]
+                                  prop.children [ Html.i
+                                                      [ prop.className [ Fa.Fa
+                                                                         Fa.FaPoll
+                                                                         Fa.Fa2X ] ]
+                                                  Html.span [ prop.style [ style.marginLeft 10
+                                                                           style.marginRight 10 ]
+                                                              prop.text item.Score ] ] ]
+                   ]
+               ]
 
-          div [ Blm.Column ]
-              [ match item.Url with
-                | Some url ->
-                    Html.a
-                        [ prop.style [ style.textDecoration.underline ]
-                          prop.target.blank
-                          prop.href url
-                          prop.text item.Title ]
+               div [ Blm.Column ] [
+                   match item.Url with
+                   | Some url ->
+                       Html.a [ prop.style [ style.textDecoration.underline ]
+                                prop.target.blank
+                                prop.href url
+                                prop.text item.Title ]
 
-                | None -> Html.p item.Title ]
+                   | None -> Html.p item.Title
+               ]
 
-          div [] [ Html.span [ prop.text (timeDistanceInWords item) ] ] ]
+               div [] [
+                   Html.span [ prop.text (timeDistanceInWords item) ]
+               ] ]
 
 let renderStoryItem (itemId: int) storyItem =
     let renderItem =
@@ -116,13 +130,11 @@ let renderStoryItem (itemId: int) storyItem =
         | Resolved (Error error) -> renderError error
         | Resolved (Ok storyItem) -> renderItemContent storyItem
 
-    Html.div
-        [ prop.key itemId
-          prop.className Blm.Box
-          prop.style
-              [ style.marginTop 15
-                style.marginBottom 15 ]
-          prop.children [ renderItem ] ]
+    Html.div [ prop.key itemId
+               prop.className Blm.Box
+               prop.style [ style.marginTop 15
+                            style.marginBottom 15 ]
+               prop.children [ renderItem ] ]
 
 let renderStories items =
     match items with
@@ -137,9 +149,8 @@ let renderStories items =
         |> Html.div
 
 let render state dispatch =
-    Html.div
-        [ prop.style [ style.padding 20 ]
-          prop.children
-              [ title
-                renderTabs state.CurrentStories dispatch
-                renderStories state.StoryItems ] ]
+    Html.div [ prop.style [ style.padding 20 ]
+               prop.children [ title
+                               renderTabs state.CurrentStories dispatch
+                               renderStories state.StoryItems
+                               renderContinueButton state dispatch ] ]

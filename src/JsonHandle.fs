@@ -64,9 +64,7 @@ let loadStoryItems stories =
                 Decode.fromString (Decode.list Decode.int) responseText
 
             match storyIds with
-            | Ok storyIds ->
-                let firstTenStories = storyIds |> List.truncate 10
-                return LoadStoryItems(Finished(Ok firstTenStories))
+            | Ok storyIds -> return LoadStoryItems(Finished(Ok storyIds))
 
             | Error errorMsg -> return LoadStoryItems(Finished(Error errorMsg))
 

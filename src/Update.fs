@@ -5,6 +5,8 @@ open Elmish
 
 let init () =
     { StoryItems = HasNotStartedYet
+      RemainingBatches = []
+      ContinueButtonState = HasNotStartedYet
       CurrentStories = Stories.New },
     Cmd.ofMsg (LoadStoryItems Started)
 
@@ -26,14 +28,19 @@ let update (msg: Msg) (state: State) =
         nextState, Cmd.fromAsync (loadStoryItems state.CurrentStories)
 
     | LoadStoryItems (Finished (Ok storyIds)) ->
+        let allStoriesIds = List.splitInto 50 storyIds
+        let workingBatch = allStoriesIds |> List.head
+        let remainingBatches = allStoriesIds |> List.tail
+
         let storiesMap =
-            Map.ofList [ for id in storyIds -> id, InProgress ]
+            Map.ofList [ for id in workingBatch -> id, InProgress ]
 
         let nextState =
             { state with
+                  RemainingBatches = remainingBatches
                   StoryItems = Resolved(Ok storiesMap) }
 
-        nextState, Cmd.batch [ for id in storyIds -> Cmd.fromAsync (loadStoryItem id) ]
+        nextState, Cmd.batch [ for id in workingBatch -> Cmd.fromAsync (loadStoryItem id) ]
 
     | LoadStoryItems (Finished (Error error)) ->
         let nextState =
@@ -41,6 +48,27 @@ let update (msg: Msg) (state: State) =
                   StoryItems = Resolved(Error error) }
 
         nextState, Cmd.none
+
+    | ContinueClicked (Resolved remainingBatches) ->
+        match remainingBatches with
+        | h :: t ->
+            let storiesMap =
+                Map.ofList [ for id in h -> id, InProgress ]
+
+            let nextState =
+                { state with
+                      RemainingBatches = t
+                      ContinueButtonState = InProgress
+                      StoryItems = Resolved(Ok storiesMap) }
+
+            nextState, Cmd.batch [ for id in h -> Cmd.fromAsync (loadStoryItem id) ]
+
+        | [] ->
+            { state with
+                  ContinueButtonState = HasNotStartedYet },
+            Cmd.none
+
+    | ContinueClicked _ -> state, Cmd.none
 
     | LoadedStoryItem (itemId, Ok item) ->
         match state.StoryItems with
@@ -52,6 +80,7 @@ let update (msg: Msg) (state: State) =
 
             let nextState =
                 { state with
+                      ContinueButtonState = HasNotStartedYet
                       StoryItems = Resolved(Ok modifiedStoriesMap) }
 
             nextState, Cmd.none

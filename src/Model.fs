@@ -18,9 +18,12 @@ type Stories =
 
 type State =
     { CurrentStories: Stories
+      RemainingBatches: List<List<int>>
+      ContinueButtonState: Deferred<List<List<int>>>
       StoryItems: Deferred<Result<Map<int, Deferred<Result<HackernewsItem, string>>>, string>> }
 
 type Msg =
     | LoadStoryItems of AsyncOperationStatus<Result<int list, string>>
     | LoadedStoryItem of int * Result<HackernewsItem, string>
     | ChangeStories of Stories
+    | ContinueClicked of Deferred<List<List<int>>>
