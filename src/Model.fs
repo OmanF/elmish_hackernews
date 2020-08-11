@@ -18,6 +18,7 @@ type Stories =
 
 type State =
     { CurrentStories: Stories
+      ProcessedBatches: Map<int, Deferred<Result<HackernewsItem, string>>>
       RemainingBatches: List<List<int>>
       ContinueButtonState: Deferred<List<List<int>>>
       StoryItems: Deferred<Result<Map<int, Deferred<Result<HackernewsItem, string>>>, string>> }

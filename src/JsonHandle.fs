@@ -65,7 +65,6 @@ let loadStoryItems stories =
 
             match storyIds with
             | Ok storyIds -> return LoadStoryItems(Finished(Ok storyIds))
-
             | Error errorMsg -> return LoadStoryItems(Finished(Error errorMsg))
 
         | HttpError -> return LoadStoryItems(Finished(Error "Could not load story."))

@@ -5,6 +5,7 @@ open Elmish
 
 let init () =
     { StoryItems = HasNotStartedYet
+      ProcessedBatches = Map.empty
       RemainingBatches = []
       ContinueButtonState = HasNotStartedYet
       CurrentStories = Stories.New },
@@ -77,9 +78,11 @@ let update (msg: Msg) (state: State) =
                 storiesMap
                 |> Map.remove itemId
                 |> Map.add itemId (Resolved(Ok item))
+                |> Map.fold (fun acc key value -> Map.add key value acc) state.ProcessedBatches
 
             let nextState =
                 { state with
+                      ProcessedBatches = modifiedStoriesMap
                       ContinueButtonState = HasNotStartedYet
                       StoryItems = Resolved(Ok modifiedStoriesMap) }
 
